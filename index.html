@@ -30,7 +30,6 @@
             --accent: #60a5fa;
         }
 
-        /* Light theme variables */
         body.light-theme {
             --bg-primary: #f0f4f8;
             --bg-secondary: #e1e8f0;
@@ -540,6 +539,58 @@
             color: #c4b5fd;
             border: 1px solid rgba(196, 181, 253, 0.3);
         }
+
+        .analytics-section {
+            margin-bottom: 25px;
+            padding: 20px;
+            background: var(--bg-card);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+        }
+
+        .analytics-section h3 {
+            margin-top: 0;
+            color: var(--accent);
+            border-bottom: 2px solid var(--border);
+            padding-bottom: 10px;
+        }
+
+        .analytics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .analytics-card {
+            background: rgba(12, 23, 36, 0.5);
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid var(--accent);
+        }
+
+        .analytics-card h4 {
+            color: var(--text-secondary);
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .analytics-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--accent);
+        }
+
+        .suggestion-item {
+            padding: 8px 12px;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: background 0.2s;
+        }
+
+        .suggestion-item:hover {
+            background: var(--bg-hover);
+        }
         
         @media (max-width: 768px) {
             .stats-grid { grid-template-columns: repeat(2, 1fr); }
@@ -590,7 +641,7 @@
                 <h2 class="card-title">Задачи</h2>
                 <div style="display: flex; gap: 10px; align-items: center;">
                     <small style="color: var(--text-secondary); font-size: 11px;">
-                        💡 Совет: Время вводится в формате ЧЧ:ММ (например: 2:30)
+                        💡 Время начала автоматически ставится текущее
                     </small>
                 </div>
             </div>
@@ -626,13 +677,12 @@
                             <th>Подкатегория</th>
                             <th>Название</th>
                             <th>Инструктор</th>
-                            <th>Плановое время</th>
                             <th style="min-width: 180px;">Статус / Действия</th>
                             <th>🗑️</th>
                         </tr>
                     </thead>
                     <tbody id="tasksTable">
-                        <tr><td colspan="13">Нет задач</td></tr>
+                        <tr><td colspan="12">Нет задач</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -650,7 +700,7 @@
             <div class="stat">
                 <div class="stat-icon">📚</div>
                 <div class="stat-value" id="totalTasks">0</div>
-                <div class="stat-label">Всего инструктажей</div>
+                <div class="stat-label">Всего задач</div>
             </div>
             <div class="stat">
                 <div class="stat-icon">✅</div>
@@ -715,16 +765,20 @@
             <div class="card-header">
                 <h2 class="card-title">📊 Детальная Аналитика</h2>
                 <div class="controls">
-                    <select id="analyticsTaskType" onchange="showAnalytics('weekly')" style="max-width: 200px;">
+                    <select id="analyticsPeriod" onchange="showAdvancedAnalytics()" style="max-width: 200px;">
+                        <option value="week">За неделю</option>
+                        <option value="month">За месяц</option>
+                        <option value="quarter">За квартал</option>
+                        <option value="year">За год</option>
+                    </select>
+                    <select id="analyticsTaskType" onchange="showAdvancedAnalytics()" style="max-width: 200px;">
                         <option value="all">Все задачи</option>
                         <option value="instruction">Только инструктажи</option>
                         <option value="routine">Только рутинные</option>
                     </select>
-                    <button class="btn btn-sm" onclick="showAnalytics('weekly')">За неделю</button>
-                    <button class="btn btn-sm" onclick="showAnalytics('monthly')">За месяц</button>
                 </div>
             </div>
-            <div id="analyticsContent"></div>
+            <div id="advancedAnalyticsContent"></div>
         </div>
 
         <div class="chart-grid">
@@ -739,20 +793,20 @@
 
             <div class="card">
                 <div class="card-header">
-                    <h3 class="card-title">🔥 Активность по месяцам</h3>
+                    <h3 class="card-title">📊 Распределение по типам задач</h3>
                 </div>
                 <div class="chart-container">
-                    <canvas id="heatmapChart"></canvas>
+                    <canvas id="taskTypeChart"></canvas>
                 </div>
             </div>
         </div>
 
         <div class="card">
             <div class="card-header">
-                <h3 class="card-title">📈 Прогнозная аналитика</h3>
+                <h3 class="card-title">📈 Эффективность по времени</h3>
             </div>
             <div class="chart-container">
-                <canvas id="forecastChart"></canvas>
+                <canvas id="efficiencyChart"></canvas>
             </div>
         </div>
     </div>
@@ -868,10 +922,7 @@
                 
                 <div style="margin-top: 10px; padding: 10px; background: rgba(96, 165, 250, 0.1); border-radius: 6px;">
                     <small style="color: var(--text-secondary);">
-                        💡 <strong>Как работает:</strong><br>
-                        • Нажмите "Загрузить в облако" - сохраните данные в Google Sheets<br>
-                        • Нажмите "Загрузить из облака" - получите данные от Акылбека<br>
-                        • Асанбек & Акылбек работают с одной таблицей!
+                        💡 <strong>Автосинхронизация:</strong> Каждые 5 минут данные автоматически сохраняются в облако
                     </small>
                 </div>
             </div>
@@ -937,7 +988,7 @@
         </div>
         <div class="form-group">
             <label>Время начала:</label>
-            <input type="time" id="taskTimeStart" value="09:00">
+            <input type="time" id="taskTimeStart">
         </div>
         <div class="form-group">
             <label>Время окончания:</label>
@@ -961,11 +1012,8 @@
         </div>
         <div class="form-group">
             <label>Название:</label>
-            <input type="text" id="taskName">
-        </div>
-        <div class="form-group">
-            <label>Плановое время (ЧЧ:ММ, например 2:30):</label>
-            <input type="text" id="taskHours" placeholder="0:00" pattern="[0-9]{1,2}:[0-5][0-9]">
+            <input type="text" id="taskName" list="taskNameSuggestions" placeholder="Начните вводить для предложений">
+            <datalist id="taskNameSuggestions"></datalist>
         </div>
         <div class="form-group">
             <label>Инструктор:</label>
@@ -1085,8 +1133,8 @@ var statusChartInstance = null;
 var categoryChartInstance = null;
 var weeklyTrendChartInstance = null;
 var instructorChartInstance = null;
-var heatmapChartInstance = null;
-var forecastChartInstance = null;
+var taskTypeChartInstance = null;
+var efficiencyChartInstance = null;
 
 // ============= ФУНКЦИИ ДЛЯ РАБОТЫ С ВРЕМЕНЕМ (ЧЧ:ММ) =============
 function timeToMinutes(timeStr) {
@@ -1167,22 +1215,19 @@ function loadTheme() {
 function updateUIBasedOnPermissions() {
     var isReadOnly = currentUser === 'oka';
     
-    // Скрываем/показываем кнопки действий
     var actionButtons = document.querySelectorAll('.btn-success, .btn-warning, .btn-danger');
     actionButtons.forEach(function(btn) {
         if (btn.classList.contains('btn-info') || btn.innerText.includes('Excel') || btn.innerText.includes('JSON')) {
-            return; // Не скрываем кнопки экспорта
+            return;
         }
         btn.style.display = isReadOnly ? 'none' : '';
     });
     
-    // Делаем поля ввода только для чтения в таблице
     var inputs = document.querySelectorAll('#tasksTable input, #tasksTable select');
     inputs.forEach(function(input) {
         input.disabled = isReadOnly;
     });
     
-    // Показываем уведомление о режиме просмотра
     if (isReadOnly) {
         if (!document.getElementById('readOnlyNotice')) {
             var notice = document.createElement('div');
@@ -1205,8 +1250,11 @@ function init() {
     showTasks();
     updateStats();
     loadTheme();
+    updateTaskNameSuggestions();
     
-    // Проверка XLSX библиотеки
+    // Автоматическая синхронизация каждые 5 минут
+    setInterval(syncToCloud, 300000);
+    
     if (typeof XLSX === 'undefined') {
         console.warn('⚠️ XLSX библиотека не загружена через CDN');
     } else {
@@ -1232,15 +1280,12 @@ function loadData() {
                 task.hoursMinutes = Math.round(task.hoursSpent * 60);
                 delete task.hoursSpent;
             }
-            // Добавляем dateStart если его нет
             if (!task.dateStart) {
                 task.dateStart = task.date || getTodayDate();
             }
-            // Добавляем dateEnd если его нет
             if (!task.dateEnd && task.status === 'Выполнено') {
                 task.dateEnd = task.date || getTodayDate();
             }
-            // Добавляем тип задачи по умолчанию
             if (!task.taskType) {
                 task.taskType = 'instruction';
             }
@@ -1310,6 +1355,38 @@ function toggleCustomSubcategory() {
     }
 }
 
+// ============= ПРЕДЛОЖЕНИЯ ДЛЯ НАЗВАНИЙ =============
+function updateTaskNameSuggestions() {
+    var datalist = document.getElementById('taskNameSuggestions');
+    datalist.innerHTML = '';
+    
+    // Собираем уникальные названия из существующих задач
+    var uniqueNames = [...new Set(tasks.map(task => task.name))];
+    
+    // Добавляем популярные варианты
+    var popularNames = [
+        "Вводный инструктаж",
+        "Первичный инструктаж",
+        "Повторный инструктаж",
+        "Внеплановый инструктаж",
+        "Целевой инструктаж",
+        "Обучение по охране труда",
+        "Проверка знаний",
+        "Стажировка на рабочем месте",
+        "Обучение безопасным методам работы",
+        "Инструктаж по пожарной безопасности"
+    ];
+    
+    // Объединяем и сортируем
+    var allNames = [...new Set([...popularNames, ...uniqueNames])];
+    
+    allNames.forEach(function(name) {
+        var option = document.createElement('option');
+        option.value = name;
+        datalist.appendChild(option);
+    });
+}
+
 // ============= МОДАЛЬНЫЕ ОКНА =============
 function showModal(id) {
     var modal = document.getElementById(id);
@@ -1319,12 +1396,12 @@ function showModal(id) {
         var today = getTodayDate();
         document.getElementById('taskDateStart').value = today;
         document.getElementById('taskDateEnd').value = '';
-        document.getElementById('taskTimeStart').value = '09:00';
+        document.getElementById('taskTimeStart').value = getCurrentTime(); // Автоматически текущее время
         document.getElementById('taskTimeEnd').value = '';
         document.getElementById('taskInstructor').value = currentUser === 'oka' ? 'asanbek' : currentUser;
-        document.getElementById('taskHours').value = '0:00';
         document.getElementById('taskStatus').value = 'Ожидание';
         document.getElementById('taskType').value = 'instruction';
+        updateTaskNameSuggestions();
     }
     if (id === 'eIsotModal') {
         document.getElementById('eIsotDate').value = getTodayDate();
@@ -1361,7 +1438,6 @@ function addTask() {
     var subcat = document.getElementById('taskSubcategory').value;
     var customSubcat = document.getElementById('taskCustomSubcategory').value.trim();
     var name = document.getElementById('taskName').value.trim();
-    var hoursInput = document.getElementById('taskHours').value.trim();
     var inst = document.getElementById('taskInstructor').value;
     var status = document.getElementById('taskStatus').value;
     
@@ -1381,20 +1457,16 @@ function addTask() {
         return;
     }
     
-    // Если статус "Выполнено" и дата окончания не указана, ставим текущую дату
     if (status === 'Выполнено' && !dateEnd) {
         dateEnd = getTodayDate();
     }
     
-    // Если статус "Выполнено" и время окончания не указано, ставим текущее время
     if (status === 'Выполнено' && !timeEnd) {
         timeEnd = getCurrentTime();
     }
     
-    var hoursMinutes = timeToMinutes(hoursInput);
     var actualMinutes = 0;
     
-    // Рассчитываем фактическое время если есть время начала и окончания
     if (timeStart && timeEnd) {
         var startParts = timeStart.split(':');
         var endParts = timeEnd.split(':');
@@ -1402,7 +1474,6 @@ function addTask() {
         var endMinutes = parseInt(endParts[0]) * 60 + parseInt(endParts[1]);
         actualMinutes = endMinutes - startMinutes;
         
-        // Если время отрицательное (переход через полночь)
         if (actualMinutes < 0) {
             actualMinutes += 24 * 60;
         }
@@ -1418,7 +1489,6 @@ function addTask() {
         category: cat,
         subcategory: subcat,
         name: name,
-        hoursMinutes: hoursMinutes,
         actualMinutes: actualMinutes,
         assignedTo: inst,
         status: status,
@@ -1432,12 +1502,19 @@ function addTask() {
     showTasks();
     addToFullHistory('Задача создана: ' + name + ' (' + (taskType === 'instruction' ? 'Инструктаж' : 'Рутинная') + ')');
     document.getElementById('taskCustomSubcategory').value = '';
+    updateTaskNameSuggestions();
     alert('✅ Сохранено!');
 }
 
 function deleteTask(id) {
     var task = tasks.find(function(t) { return t.id === id; });
     if (!task) return;
+    
+    // Проверка прав доступа - пользователь может удалять только свои задачи
+    if (task.assignedTo !== currentUser && currentUser !== 'oka') {
+        alert('❌ Вы не можете удалить задачу другого пользователя!');
+        return;
+    }
     
     var message = '⚠️ ВЫ УВЕРЕНЫ ЧТО ХОТИТЕ УДАЛИТЬ ЭТУ ЗАПИСЬ?\n\n';
     message += '📅 Дата начала: ' + formatDateForDisplay(task.dateStart) + '\n';
@@ -1446,7 +1523,6 @@ function deleteTask(id) {
     message += '📂 Подкатегория: ' + task.subcategory + '\n';
     message += '📝 Название: ' + task.name + '\n';
     message += '👤 Инструктор: ' + (task.assignedTo === 'asanbek' ? 'Асанбек' : 'Акылбек') + '\n';
-    message += '⏱️ Время: ' + minutesToTime(task.hoursMinutes) + '\n';
     message += '📊 Статус: ' + task.status + '\n\n';
     message += 'Это действие нельзя отменить!';
     
@@ -1463,7 +1539,6 @@ function showTasks() {
     var statusFilter = document.getElementById('filterStatus').value;
     var taskTypeFilter = document.getElementById('filterTaskType').value;
     
-    // ✅ Сортировка от СТАРЫХ к НОВЫМ (по дате начала)
     var filtered = tasks.filter(function(t) {
         if (catFilter && t.category !== catFilter) return false;
         if (statusFilter && t.status !== statusFilter) return false;
@@ -1493,8 +1568,6 @@ function showTasks() {
         html += '<td><strong>' + task.name + '</strong></td>';
         html += '<td>' + (task.assignedTo === 'asanbek' ? 'Асанбек' : 'Акылбек') + '</td>';
         
-        html += '<td><input type="text" value="' + minutesToTime(task.hoursMinutes) + '" onchange="updateTaskHours(' + task.id + ', this.value)" style="width: 70px; padding: 5px; text-align: center;" pattern="[0-9]{1,2}:[0-5][0-9]"></td>';
-        
         html += '<td><div style="display: flex; gap: 5px; flex-wrap: wrap;">';
         if (task.status !== 'Ожидание') {
             html += '<button class="btn btn-sm badge-pending" onclick="changeTaskStatus(' + task.id + ', \'Ожидание\')" title="Ожидание" style="padding: 4px 8px;">⏸️</button>';
@@ -1512,7 +1585,7 @@ function showTasks() {
         html += '</tr>';
     });
 
-    document.getElementById('tasksTable').innerHTML = html || '<tr><td colspan="13">Нет задач</td></tr>';
+    document.getElementById('tasksTable').innerHTML = html || '<tr><td colspan="12">Нет задач</td></tr>';
     updateStats();
 }
 
@@ -1542,7 +1615,6 @@ function updateTaskTimeStart(id, newTime) {
         var oldTime = task.timeStart;
         task.timeStart = newTime;
         
-        // Пересчитываем фактическое время если есть время окончания
         if (task.timeEnd) {
             calculateActualTime(task);
         }
@@ -1558,7 +1630,6 @@ function updateTaskTimeEnd(id, newTime) {
         var oldTime = task.timeEnd;
         task.timeEnd = newTime;
         
-        // Пересчитываем фактическое время если есть время начала
         if (task.timeStart) {
             calculateActualTime(task);
         }
@@ -1576,7 +1647,6 @@ function calculateActualTime(task) {
         var endMinutes = parseInt(endParts[0]) * 60 + parseInt(endParts[1]);
         task.actualMinutes = endMinutes - startMinutes;
         
-        // Если время отрицательное (переход через полночь)
         if (task.actualMinutes < 0) {
             task.actualMinutes += 24 * 60;
         }
@@ -1589,24 +1659,19 @@ function changeTaskStatus(id, newStatus) {
         var oldStatus = task.status;
         task.status = newStatus;
         
-        // Автоматическое обновление дат и времени при изменении статуса
         if (newStatus === 'Начато' && !task.startedAt) {
             task.startedAt = new Date().toISOString();
-            // Устанавливаем время начала, если не задано
             if (!task.timeStart) {
                 task.timeStart = getCurrentTime();
             }
         }
         if (newStatus === 'Выполнено' && !task.completedAt) {
             task.completedAt = new Date().toISOString();
-            // Автоматически устанавливаем дату окончания если не указана
             if (!task.dateEnd) {
                 task.dateEnd = getTodayDate();
             }
-            // Автоматически устанавливаем время окончания если не указано
             if (!task.timeEnd) {
                 task.timeEnd = getCurrentTime();
-                // Пересчитываем фактическое время
                 if (task.timeStart) {
                     calculateActualTime(task);
                 }
@@ -1616,17 +1681,6 @@ function changeTaskStatus(id, newStatus) {
         saveData();
         showTasks();
         addToFullHistory('Статус изменён: "' + task.name + '" с "' + oldStatus + '" на "' + newStatus + '"');
-    }
-}
-
-function updateTaskHours(id, timeStr) {
-    var task = tasks.find(function(t) { return t.id === id; });
-    if (task) {
-        var oldTime = minutesToTime(task.hoursMinutes);
-        task.hoursMinutes = timeToMinutes(timeStr);
-        saveData();
-        updateStats();
-        addToFullHistory('Время изменено: "' + task.name + '" с ' + oldTime + ' на ' + minutesToTime(task.hoursMinutes));
     }
 }
 
@@ -1658,7 +1712,6 @@ function addEIsot() {
 
 function renderEIsot() {
     var html = '';
-    // ✅ ИСПРАВЛЕНИЕ: Сортировка от СТАРЫХ к НОВЫМ
     eIsotResults.sort(function(a, b) {
         return new Date(a.date) - new Date(b.date);
     }).forEach(function(r) {
@@ -1676,6 +1729,12 @@ function renderEIsot() {
 function deleteEIsot(id) {
     var record = eIsotResults.find(function(r) { return r.id === id; });
     if (!record) return;
+    
+    // Проверка прав доступа
+    if (record.instructor !== currentUser && currentUser !== 'oka') {
+        alert('❌ Вы не можете удалить запись другого пользователя!');
+        return;
+    }
     
     var message = '⚠️ ВЫ УВЕРЕНЫ ЧТО ХОТИТЕ УДАЛИТЬ ЭТУ ЗАПИСЬ ЕИСОТ?\n\n';
     message += '📅 Дата: ' + formatDateForDisplay(record.date) + '\n';
@@ -1717,7 +1776,6 @@ function addPrombez() {
 
 function renderPrombez() {
     var html = '';
-    // ✅ ИСПРАВЛЕНИЕ: Сортировка от СТАРЫХ к НОВЫМ
     prombezResults.sort(function(a, b) {
         return new Date(a.date) - new Date(b.date);
     }).forEach(function(r) {
@@ -1734,6 +1792,12 @@ function renderPrombez() {
 function deletePrombez(id) {
     var record = prombezResults.find(function(r) { return r.id === id; });
     if (!record) return;
+    
+    // Проверка прав доступа
+    if (record.instructor !== currentUser && currentUser !== 'oka') {
+        alert('❌ Вы не можете удалить запись другого пользователя!');
+        return;
+    }
     
     var message = '⚠️ ВЫ УВЕРЕНЫ ЧТО ХОТИТЕ УДАЛИТЬ ЭТУ ЗАПИСЬ ПРОМБЕЗ?\n\n';
     message += '📅 Дата: ' + formatDateForDisplay(record.date) + '\n';
@@ -1776,7 +1840,6 @@ function addNDTesting() {
 
 function renderNDTesting() {
     var html = '';
-    // ✅ ИСПРАВЛЕНИЕ: Сортировка от СТАРЫХ к НОВЫМ
     ndTestingResults.sort(function(a, b) {
         return new Date(a.date) - new Date(b.date);
     }).forEach(function(r) {
@@ -1794,6 +1857,12 @@ function renderNDTesting() {
 function deleteNDTesting(id) {
     var record = ndTestingResults.find(function(r) { return r.id === id; });
     if (!record) return;
+    
+    // Проверка прав доступа
+    if (record.instructor !== currentUser && currentUser !== 'oka') {
+        alert('❌ Вы не можете удалить запись другого пользователя!');
+        return;
+    }
     
     var message = '⚠️ ВЫ УВЕРЕНЫ ЧТО ХОТИТЕ УДАЛИТЬ ЭТУ ЗАПИСЬ НД ТЕСТИРОВАНИЯ?\n\n';
     message += '📅 Дата: ' + formatDateForDisplay(record.date) + '\n';
@@ -1815,7 +1884,7 @@ function updateStats() {
     var total = tasks.length;
     var completed = tasks.filter(function(t) { return t.status === 'Выполнено'; });
     var inProgress = tasks.filter(function(t) { return t.status === 'Начато'; });
-    var totalMinutes = tasks.reduce(function(sum, t) { return sum + t.hoursMinutes; }, 0);
+    var totalMinutes = tasks.reduce(function(sum, t) { return sum + (t.actualMinutes || 0); }, 0);
     var asanbek = completed.filter(function(t) { return t.assignedTo === 'asanbek'; }).length;
     var akylbek = completed.filter(function(t) { return t.assignedTo === 'akylbek'; }).length;
     
@@ -1827,60 +1896,165 @@ function updateStats() {
     document.getElementById('statAkylbek').textContent = akylbek;
 }
 
-function showAnalytics(type) {
+// ============= РАСШИРЕННАЯ АНАЛИТИКА =============
+function showAdvancedAnalytics() {
+    var period = document.getElementById('analyticsPeriod').value;
     var taskTypeFilter = document.getElementById('analyticsTaskType').value;
+    
     var filteredTasks = tasks.filter(function(t) { 
-        return t.status === 'Выполнено' && 
-               (taskTypeFilter === 'all' || t.taskType === taskTypeFilter);
+        return (taskTypeFilter === 'all' || t.taskType === taskTypeFilter) && t.status === 'Выполнено';
     });
     
-    var html = '<table style="width:100%"><thead><tr><th>Дата</th><th>Обучений</th><th>Время</th><th>Тип</th></tr></thead><tbody>';
+    var html = '';
     
-    if (type === 'weekly') {
-        var today = new Date();
-        var weekStart = new Date(today);
-        weekStart.setDate(today.getDate() - today.getDay() + 1);
-        for (var i = 0; i < 7; i++) {
-            var d = new Date(weekStart);
-            d.setDate(d.getDate() + i);
-            var ds = d.toISOString().split('T')[0];
-            var dayTasks = filteredTasks.filter(function(t) { return t.dateEnd === ds; });
-            var count = dayTasks.length;
-            var mins = dayTasks.reduce(function(s, t) { return s + (t.actualMinutes || t.hoursMinutes); }, 0);
-            var instructionCount = dayTasks.filter(function(t) { return t.taskType === 'instruction'; }).length;
-            var routineCount = dayTasks.filter(function(t) { return t.taskType === 'routine'; }).length;
-            
-            html += '<tr>';
-            html += '<td>' + formatDateForDisplay(ds) + '</td>';
-            html += '<td>' + count + '</td>';
-            html += '<td>' + minutesToTime(mins) + '</td>';
-            html += '<td>И: ' + instructionCount + ', Р: ' + routineCount + '</td>';
-            html += '</tr>';
-        }
-    } else {
-        var today = new Date();
-        var year = today.getFullYear();
-        var month = today.getMonth();
-        var monthCount = 0;
-        var monthMinutes = 0;
-        var monthInstructionCount = 0;
-        var monthRoutineCount = 0;
-        
-        filteredTasks.forEach(function(t) {
-            var td = new Date(t.dateEnd);
-            if (td.getMonth() === month && td.getFullYear() === year) {
-                monthCount++;
-                monthMinutes += (t.actualMinutes || t.hoursMinutes);
-                if (t.taskType === 'instruction') monthInstructionCount++;
-                if (t.taskType === 'routine') monthRoutineCount++;
+    // Статистика по типам задач
+    var instructionTasks = filteredTasks.filter(function(t) { return t.taskType === 'instruction'; }).length;
+    var routineTasks = filteredTasks.filter(function(t) { return t.taskType === 'routine'; }).length;
+    var totalTasks = filteredTasks.length;
+    
+    html += '<div class="analytics-section">';
+    html += '<h3>📊 Общая статистика</h3>';
+    html += '<div class="analytics-grid">';
+    html += '<div class="analytics-card"><h4>Всего задач</h4><div class="analytics-value">' + totalTasks + '</div></div>';
+    html += '<div class="analytics-card"><h4>Инструктажи</h4><div class="analytics-value">' + instructionTasks + '</div></div>';
+    html += '<div class="analytics-card"><h4>Рутинные задачи</h4><div class="analytics-value">' + routineTasks + '</div></div>';
+    html += '<div class="analytics-card"><h4>Соотношение</h4><div class="analytics-value">' + (totalTasks > 0 ? Math.round(instructionTasks/totalTasks*100) : 0) + '% / ' + (totalTasks > 0 ? Math.round(routineTasks/totalTasks*100) : 0) + '%</div></div>';
+    html += '</div></div>';
+    
+    // Статистика по времени
+    var totalMinutes = filteredTasks.reduce(function(sum, t) { return sum + (t.actualMinutes || 0); }, 0);
+    var avgMinutes = totalTasks > 0 ? Math.round(totalMinutes / totalTasks) : 0;
+    
+    html += '<div class="analytics-section">';
+    html += '<h3>⏱️ Статистика по времени</h3>';
+    html += '<div class="analytics-grid">';
+    html += '<div class="analytics-card"><h4>Общее время</h4><div class="analytics-value">' + minutesToTime(totalMinutes) + '</div></div>';
+    html += '<div class="analytics-card"><h4>Среднее время на задачу</h4><div class="analytics-value">' + minutesToTime(avgMinutes) + '</div></div>';
+    html += '<div class="analytics-card"><h4>Время инструктажей</h4><div class="analytics-value">' + minutesToTime(filteredTasks.filter(t => t.taskType === 'instruction').reduce((sum, t) => sum + (t.actualMinutes || 0), 0)) + '</div></div>';
+    html += '<div class="analytics-card"><h4>Время рутинных задач</h4><div class="analytics-value">' + minutesToTime(filteredTasks.filter(t => t.taskType === 'routine').reduce((sum, t) => sum + (t.actualMinutes || 0), 0)) + '</div></div>';
+    html += '</div></div>';
+    
+    // Статистика по пользователям
+    var asanbekTasks = filteredTasks.filter(function(t) { return t.assignedTo === 'asanbek'; });
+    var akylbekTasks = filteredTasks.filter(function(t) { return t.assignedTo === 'akylbek'; });
+    
+    html += '<div class="analytics-section">';
+    html += '<h3>👥 Статистика по пользователям</h3>';
+    html += '<div class="analytics-grid">';
+    html += '<div class="analytics-card"><h4>Асанбек: задачи</h4><div class="analytics-value">' + asanbekTasks.length + '</div></div>';
+    html += '<div class="analytics-card"><h4>Асанбек: время</h4><div class="analytics-value">' + minutesToTime(asanbekTasks.reduce((sum, t) => sum + (t.actualMinutes || 0), 0)) + '</div></div>';
+    html += '<div class="analytics-card"><h4>Акылбек: задачи</h4><div class="analytics-value">' + akylbekTasks.length + '</div></div>';
+    html += '<div class="analytics-card"><h4>Акылбек: время</h4><div class="analytics-value">' + minutesToTime(akylbekTasks.reduce((sum, t) => sum + (t.actualMinutes || 0), 0)) + '</div></div>';
+    html += '</div></div>';
+    
+    document.getElementById('advancedAnalyticsContent').innerHTML = html;
+    renderAdvancedCharts(filteredTasks);
+}
+
+function renderAdvancedCharts(filteredTasks) {
+    renderTaskTypeChart(filteredTasks);
+    renderEfficiencyChart(filteredTasks);
+    renderInstructorChart();
+}
+
+function renderTaskTypeChart(filteredTasks) {
+    var ctx = document.getElementById('taskTypeChart');
+    if (!ctx) return;
+    
+    var instructionTasks = filteredTasks.filter(function(t) { return t.taskType === 'instruction'; }).length;
+    var routineTasks = filteredTasks.filter(function(t) { return t.taskType === 'routine'; }).length;
+    
+    if (taskTypeChartInstance) taskTypeChartInstance.destroy();
+    
+    taskTypeChartInstance = new Chart(ctx, {
+        type: 'pie',
+        data: {
+            labels: ['Инструктажи', 'Рутинные задачи'],
+            datasets: [{
+                data: [instructionTasks, routineTasks],
+                backgroundColor: ['#60a5fa', '#8b5cf6'],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: { color: '#e6eef8' }
+                }
             }
-        });
+        }
+    });
+}
+
+function renderEfficiencyChart(filteredTasks) {
+    var ctx = document.getElementById('efficiencyChart');
+    if (!ctx) return;
+    
+    var today = new Date();
+    var weekStart = new Date(today);
+    weekStart.setDate(today.getDate() - today.getDay() + 1);
+    
+    var labels = [];
+    var instructionData = [];
+    var routineData = [];
+    
+    for (var i = 0; i < 7; i++) {
+        var d = new Date(weekStart);
+        d.setDate(d.getDate() + i);
+        var ds = d.toISOString().split('T')[0];
+        labels.push(formatDateForDisplay(ds).substring(0, 5));
         
-        html += '<tr><td>Всего:</td><td>' + monthCount + '</td><td>' + minutesToTime(monthMinutes) + '</td><td>И: ' + monthInstructionCount + ', Р: ' + monthRoutineCount + '</td></tr>';
+        var dayTasks = filteredTasks.filter(function(t) { return t.dateEnd === ds; });
+        var instructionCount = dayTasks.filter(function(t) { return t.taskType === 'instruction'; }).length;
+        var routineCount = dayTasks.filter(function(t) { return t.taskType === 'routine'; }).length;
+        
+        instructionData.push(instructionCount);
+        routineData.push(routineCount);
     }
     
-    html += '</tbody></table>';
-    document.getElementById('analyticsContent').innerHTML = html;
+    if (efficiencyChartInstance) efficiencyChartInstance.destroy();
+    
+    efficiencyChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Инструктажи',
+                    data: instructionData,
+                    backgroundColor: '#60a5fa'
+                },
+                {
+                    label: 'Рутинные задачи',
+                    data: routineData,
+                    backgroundColor: '#8b5cf6'
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: { color: '#e6eef8' },
+                    grid: { color: 'rgba(255,255,255,0.1)' }
+                },
+                x: {
+                    ticks: { color: '#e6eef8' },
+                    grid: { color: 'rgba(255,255,255,0.1)' }
+                }
+            },
+            plugins: {
+                legend: {
+                    labels: { color: '#e6eef8' }
+                }
+            }
+        }
+    });
 }
 
 // ============= ДАШБОРД =============
@@ -1897,7 +2071,7 @@ function renderKPI() {
     var completed = tasks.filter(function(t) { return t.status === 'Выполнено'; });
     var completionRate = total > 0 ? (completed.length / total * 100).toFixed(1) : 0;
     
-    var totalMinutes = tasks.reduce(function(s, t) { return s + t.hoursMinutes; }, 0);
+    var totalMinutes = tasks.reduce(function(s, t) { return s + (t.actualMinutes || 0); }, 0);
     var avgMinutes = total > 0 ? Math.round(totalMinutes / total) : 0;
     
     var thisWeek = tasks.filter(function(t) {
@@ -2060,9 +2234,8 @@ function renderWeeklyTrendChart() {
 }
 
 function renderAnalytics() {
+    showAdvancedAnalytics();
     renderInstructorChart();
-    renderHeatmapChart();
-    renderForecastChart();
 }
 
 function renderInstructorChart() {
@@ -2072,8 +2245,8 @@ function renderInstructorChart() {
     var asanbek = tasks.filter(function(t) { return t.assignedTo === 'asanbek' && t.status === 'Выполнено'; }).length;
     var akylbek = tasks.filter(function(t) { return t.assignedTo === 'akylbek' && t.status === 'Выполнено'; }).length;
     
-    var asanbekMinutes = tasks.filter(function(t) { return t.assignedTo === 'asanbek'; }).reduce(function(s, t) { return s + t.hoursMinutes; }, 0);
-    var akylbekMinutes = tasks.filter(function(t) { return t.assignedTo === 'akylbek'; }).reduce(function(s, t) { return s + t.hoursMinutes; }, 0);
+    var asanbekMinutes = tasks.filter(function(t) { return t.assignedTo === 'asanbek'; }).reduce(function(s, t) { return s + (t.actualMinutes || 0); }, 0);
+    var akylbekMinutes = tasks.filter(function(t) { return t.assignedTo === 'akylbek'; }).reduce(function(s, t) { return s + (t.actualMinutes || 0); }, 0);
     
     if (instructorChartInstance) instructorChartInstance.destroy();
     
@@ -2083,155 +2256,14 @@ function renderInstructorChart() {
             labels: ['Асанбек', 'Акылбек'],
             datasets: [
                 {
-                    label: 'Выполнено инструктажей',
+                    label: 'Выполнено задач',
                     data: [asanbek, akylbek],
                     backgroundColor: '#60a5fa'
                 },
                 {
-                    label: 'Часов обучения (десятичн.)',
+                    label: 'Часов работы (десятичн.)',
                     data: [minutesToDecimalHours(asanbekMinutes), minutesToDecimalHours(akylbekMinutes)],
                     backgroundColor: '#10b981'
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: { color: '#e6eef8' },
-                    grid: { color: 'rgba(255,255,255,0.1)' }
-                },
-                x: {
-                    ticks: { color: '#e6eef8' },
-                    grid: { color: 'rgba(255,255,255,0.1)' }
-                }
-            },
-            plugins: {
-                legend: {
-                    labels: { color: '#e6eef8' }
-                }
-            }
-        }
-    });
-}
-
-function renderHeatmapChart() {
-    var ctx = document.getElementById('heatmapChart');
-    if (!ctx) return;
-    
-    var months = {};
-    tasks.forEach(function(t) {
-        var month = t.dateStart.substring(0, 7);
-        months[month] = (months[month] || 0) + 1;
-    });
-    
-    var labels = Object.keys(months).sort();
-    var data = labels.map(function(m) { return months[m]; });
-    
-    if (heatmapChartInstance) heatmapChartInstance.destroy();
-    
-    heatmapChartInstance = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: labels.map(function(m) { 
-                var parts = m.split('-');
-                return parts[1] + '.' + parts[0].substring(2);
-            }),
-            datasets: [{
-                label: 'Активность по месяцам',
-                data: data,
-                backgroundColor: data.map(function(v) {
-                    var max = Math.max.apply(null, data);
-                    var intensity = v / max;
-                    return 'rgba(96, 165, 250, ' + (0.2 + intensity * 0.8) + ')';
-                })
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: { color: '#e6eef8' },
-                    grid: { color: 'rgba(255,255,255,0.1)' }
-                },
-                x: {
-                    ticks: { color: '#e6eef8' },
-                    grid: { color: 'rgba(255,255,255,0.1)' }
-                }
-            },
-            plugins: {
-                legend: {
-                    labels: { color: '#e6eef8' }
-                }
-            }
-        }
-    });
-}
-
-function renderForecastChart() {
-    var ctx = document.getElementById('forecastChart');
-    if (!ctx) return;
-    
-    var today = new Date();
-    var last3Months = [];
-    
-    for (var i = 2; i >= 0; i--) {
-        var d = new Date(today);
-        d.setMonth(d.getMonth() - i);
-        last3Months.push(d.toISOString().substring(0, 7));
-    }
-    
-    var avgPerMonth = 0;
-    last3Months.forEach(function(month) {
-        var count = tasks.filter(function(t) { return t.dateStart.startsWith(month) && t.status === 'Выполнено'; }).length;
-        avgPerMonth += count;
-    });
-    avgPerMonth = avgPerMonth / 3;
-    
-    var labels = [];
-    var historicalData = [];
-    var forecastData = [];
-    
-    last3Months.forEach(function(month) {
-        labels.push(month.substring(5, 7) + '.' + month.substring(2, 4));
-        var count = tasks.filter(function(t) { return t.dateStart.startsWith(month) && t.status === 'Выполнено'; }).length;
-        historicalData.push(count);
-        forecastData.push(null);
-    });
-    
-    for (var i = 1; i <= 3; i++) {
-        var d = new Date(today);
-        d.setMonth(d.getMonth() + i);
-        labels.push((d.getMonth() + 1) + '.' + d.getFullYear().toString().substring(2));
-        historicalData.push(null);
-        forecastData.push(Math.round(avgPerMonth));
-    }
-    
-    if (forecastChartInstance) forecastChartInstance.destroy();
-    
-    forecastChartInstance = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: labels,
-            datasets: [
-                {
-                    label: 'Фактические данные',
-                    data: historicalData,
-                    borderColor: '#60a5fa',
-                    backgroundColor: 'rgba(96, 165, 250, 0.1)',
-                    tension: 0.4
-                },
-                {
-                    label: 'Прогноз',
-                    data: forecastData,
-                    borderColor: '#f59e0b',
-                    backgroundColor: 'rgba(245, 158, 11, 0.1)',
-                    borderDash: [5, 5],
-                    tension: 0.4
                 }
             ]
         },
@@ -2349,11 +2381,9 @@ function renameCategory(index, oldName) {
         return;
     }
     
-    // Переименовываем категорию
     categories[newName] = categories[oldName];
     delete categories[oldName];
     
-    // Обновляем задачи
     tasks.forEach(function(task) {
         if (task.category === oldName) {
             task.category = newName;
@@ -2380,10 +2410,7 @@ function deleteCategory(catName) {
     message += 'Это действие нельзя отменить!';
     
     if (confirm(message)) {
-        // Удаляем категорию
         delete categories[catName];
-        
-        // Удаляем задачи из этой категории
         tasks = tasks.filter(function(t) { return t.category !== catName; });
         
         saveData();
@@ -2513,7 +2540,6 @@ function doExport() {
     try {
         console.log('📊 Начинаю экспорт в Excel...');
         
-        // Проверка XLSX
         if (typeof XLSX === 'undefined') {
             alert('❌ ОШИБКА: Библиотека XLSX не загружена!\n\nПожалуйста:\n1. Проверьте подключение к интернету\n2. Обновите страницу (F5)\n3. Попробуйте снова');
             console.error('XLSX библиотека не найдена');
@@ -2522,7 +2548,6 @@ function doExport() {
         
         console.log('✅ XLSX библиотека найдена');
         
-        // ✅ КРАСИВЫЙ ДЕТАЛЬНЫЙ РЕЕСТР
         var exportData = tasks.map(function(t) {
             var statusIcon = t.status === 'Выполнено' ? '✅' : 
                            t.status === 'Начато' ? '▶️' : '⏸️';
@@ -2542,8 +2567,6 @@ function doExport() {
                 '📂 Подкатегория': t.subcategory,
                 '📝 Название': t.name,
                 '👤 Инструктор': t.assignedTo === 'asanbek' ? 'Асанбек' : 'Акылбек',
-                '⏱️ Плановое время (ЧЧ:ММ)': minutesToTime(t.hoursMinutes),
-                '🕐 Часы (десятичн.)': minutesToDecimalHours(t.hoursMinutes),
                 '📊 Статус': statusIcon + ' ' + t.status,
                 '🆕 Создано': createdDate,
                 '▶️ Начато': startedDate,
@@ -2553,13 +2576,10 @@ function doExport() {
         
         console.log('📋 Подготовлено записей:', exportData.length);
         
-        // Создаем рабочую книгу
         var wb = XLSX.utils.book_new();
         
-        // Лист 1: Основные данные
         var ws = XLSX.utils.json_to_sheet(exportData);
         
-        // Настройка ширины колонок
         ws['!cols'] = [
             { wch: 12 },  // Дата начала
             { wch: 12 },  // Дата окончания
@@ -2571,8 +2591,6 @@ function doExport() {
             { wch: 25 },  // Подкатегория
             { wch: 40 },  // Название
             { wch: 12 },  // Инструктор
-            { wch: 12 },  // Время ЧЧ:ММ
-            { wch: 12 },  // Часы десятичн.
             { wch: 15 },  // Статус
             { wch: 20 },  // Создано
             { wch: 20 },  // Начато
@@ -2581,13 +2599,12 @@ function doExport() {
         
         XLSX.utils.book_append_sheet(wb, ws, 'Инструктажи');
         
-        // Лист 2: Статистика
         var stats = [
-            { 'Показатель': 'Всего инструктажей', 'Значение': tasks.length },
+            { 'Показатель': 'Всего задач', 'Значение': tasks.length },
             { 'Показатель': 'Выполнено', 'Значение': tasks.filter(function(t) { return t.status === 'Выполнено'; }).length },
             { 'Показатель': 'В процессе', 'Значение': tasks.filter(function(t) { return t.status === 'Начато'; }).length },
             { 'Показатель': 'Ожидание', 'Значение': tasks.filter(function(t) { return t.status === 'Ожидание'; }).length },
-            { 'Показатель': 'Всего времени', 'Значение': minutesToTime(tasks.reduce(function(s, t) { return s + t.hoursMinutes; }, 0)) },
+            { 'Показатель': 'Всего времени', 'Значение': minutesToTime(tasks.reduce(function(s, t) { return s + (t.actualMinutes || 0); }, 0)) },
             { 'Показатель': 'Асанбек (выполнено)', 'Значение': tasks.filter(function(t) { return t.assignedTo === 'asanbek' && t.status === 'Выполнено'; }).length },
             { 'Показатель': 'Акылбек (выполнено)', 'Значение': tasks.filter(function(t) { return t.assignedTo === 'akylbek' && t.status === 'Выполнено'; }).length }
         ];
@@ -2595,7 +2612,6 @@ function doExport() {
         wsStats['!cols'] = [{ wch: 25 }, { wch: 20 }];
         XLSX.utils.book_append_sheet(wb, wsStats, 'Статистика');
         
-        // Лист 3: ЕИСОТ
         if (eIsotResults.length > 0) {
             var eIsotData = eIsotResults.map(function(r) {
                 return {
@@ -2609,7 +2625,6 @@ function doExport() {
             XLSX.utils.book_append_sheet(wb, wsEisot, 'ЕИСОТ');
         }
         
-        // Лист 4: Промбезопасность
         if (prombezResults.length > 0) {
             var prombezData = prombezResults.map(function(r) {
                 return {
@@ -2622,7 +2637,6 @@ function doExport() {
             XLSX.utils.book_append_sheet(wb, wsPrombez, 'Промбезопасность');
         }
         
-        // Лист 5: НД тестирование
         if (ndTestingResults.length > 0) {
             var ndData = ndTestingResults.map(function(r) {
                 return {
@@ -2636,7 +2650,6 @@ function doExport() {
             XLSX.utils.book_append_sheet(wb, wsNd, 'НД тестирование');
         }
         
-        // Сохранение файла
         var filename = 'Реестр_Инструктажей_' + new Date().toISOString().split('T')[0] + '.xlsx';
         XLSX.writeFile(wb, filename);
         
@@ -2699,6 +2712,7 @@ function importFromFile() {
             populateCategories();
             showTasks();
             updateStats();
+            updateTaskNameSuggestions();
             alert('✅ Данные успешно импортированы!');
             addToFullHistory('📥 Импорт данных');
         } catch(e) {
@@ -2771,13 +2785,12 @@ async function syncToCloud() {
         
         const result = await response.json();
         if (result.status === "success") {
-            alert('✅ Синхронизировано!\n\nДанные загружены в Google Sheets');
-            addToFullHistory('☁️ Данные синхронизированы в Google Sheets');
+            console.log('✅ Данные синхронизированы с Google Sheets');
         } else {
-            alert('❌ Ошибка: ' + result.message);
+            console.error('❌ Ошибка синхронизации:', result.message);
         }
     } catch (error) {
-        alert('❌ Ошибка синхронизации: ' + error.message);
+        console.error('❌ Ошибка синхронизации:', error.message);
     }
 }
 
@@ -2800,6 +2813,7 @@ async function syncFromCloud() {
             saveData();
             showTasks();
             updateStats();
+            updateTaskNameSuggestions();
             
             alert('✅ Данные загружены!\n\nДанные обновлены из Google Sheets');
             addToFullHistory('☁️ Данные загружены из Google Sheets');
