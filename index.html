@@ -3028,13 +3028,15 @@ function importFromFile() {
     reader.readAsText(file);
 }
 
-// ============= GOOGLE SHEETS СИНХРОНИЗАЦИЯ =============
+// ============= GOOGLE SHEETS СИНХРОНИЗАЦИЯ (ИСПРАВЛЕННАЯ) =============
 async function syncToCloud() {
     try {
         console.log('🔄 Начинаю синхронизацию с Google Sheets...');
         
+        // Подготавливаем данные для отправки по типам
         const dataToSync = {
-            data: JSON.stringify({
+            dataType: 'fullState',
+            data: {
                 tasks: tasks,
                 eIsotResults: eIsotResults,
                 prombezResults: prombezResults,
@@ -3044,13 +3046,16 @@ async function syncToCloud() {
                 ndTestTypes: ndTestTypes,
                 lastSync: new Date().toISOString(),
                 syncedBy: currentUser
-            }),
+            },
             user: currentUser,
             action: 'save'
         };
         
         console.log('📊 Отправляю данные:', {
             tasks: tasks.length,
+            eIsotResults: eIsotResults.length,
+            prombezResults: prombezResults.length,
+            ndTestingResults: ndTestingResults.length,
             history: fullHistory.length,
             categories: Object.keys(categories).length
         });
@@ -3084,22 +3089,65 @@ async function syncFromCloud() {
     try {
         console.log('🔄 Загружаю данные из Google Sheets...');
         
-        const url = GOOGLE_SCRIPT_URL + '?t=' + Date.now();
+        const url = GOOGLE_SCRIPT_URL + '?action=get_all&t=' + Date.now();
         const response = await fetch(url);
         const result = await response.json();
         
         console.log('📥 Получены данные:', result);
         
         if (result.status === "success" && result.data) {
-            const restoredData = JSON.parse(result.data);
+            const cloudData = result.data;
             
-            tasks = restoredData.tasks || [];
-            eIsotResults = restoredData.eIsotResults || [];
-            prombezResults = restoredData.prombezResults || [];
-            ndTestingResults = restoredData.ndTestingResults || [];
-            fullHistory = restoredData.fullHistory || [];
-            categories = restoredData.categories || categories;
-            ndTestTypes = restoredData.ndTestTypes || ndTestTypes;
+            // Безопасное обновление данных с сохранением локальных изменений
+            // Используем стратегию слияния, а не полной замены
+            
+            // Для задач: объединяем по ID
+            if (cloudData.tasks && cloudData.tasks.length > 0) {
+                const taskMap = new Map();
+                
+                // Сначала добавляем локальные задачи
+                tasks.forEach(task => taskMap.set(task.id, task));
+                
+                // Затем добавляем/обновляем облачные задачи
+                cloudData.tasks.forEach(cloudTask => {
+                    if (!taskMap.has(cloudTask.id)) {
+                        taskMap.set(cloudTask.id, cloudTask);
+                    }
+                });
+                
+                tasks = Array.from(taskMap.values());
+            }
+            
+            // Для остальных данных используем облачные версии, если они есть
+            if (cloudData.eIsotResults && cloudData.eIsotResults.length > 0) {
+                eIsotResults = cloudData.eIsotResults;
+            }
+            if (cloudData.prombezResults && cloudData.prombezResults.length > 0) {
+                prombezResults = cloudData.prombezResults;
+            }
+            if (cloudData.ndTestingResults && cloudData.ndTestingResults.length > 0) {
+                ndTestingResults = cloudData.ndTestingResults;
+            }
+            if (cloudData.fullHistory && cloudData.fullHistory.length > 0) {
+                // Объединяем историю
+                const historyMap = new Map();
+                fullHistory.forEach(item => {
+                    const key = item.date + '-' + item.time + '-' + item.action;
+                    historyMap.set(key, item);
+                });
+                cloudData.fullHistory.forEach(item => {
+                    const key = item.date + '-' + item.time + '-' + item.action;
+                    historyMap.set(key, item);
+                });
+                fullHistory = Array.from(historyMap.values())
+                    .sort((a, b) => new Date(b.date + 'T' + b.time) - new Date(a.date + 'T' + a.time));
+            }
+            if (cloudData.categories && Object.keys(cloudData.categories).length > 0) {
+                categories = { ...categories, ...cloudData.categories };
+            }
+            if (cloudData.ndTestTypes && cloudData.ndTestTypes.length > 0) {
+                ndTestTypes = [...new Set([...ndTestTypes, ...cloudData.ndTestTypes])];
+            }
             
             saveData();
             
