@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TARS - Говорящий Робот</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 100%);
+            color: #e0e0e0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .header {
+            background: rgba(20, 20, 30, 0.9);
+            padding: 20px;
+            text-align: center;
+            border-bottom: 2px solid #00d4ff;
+            box-shadow: 0 4px 20px rgba(0, 212, 255, 0.3);
+        }
+
+        .header h1 {
+            color: #00d4ff;
+            font-size: 2.5em;
+            text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+            letter-spacing: 5px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #8899aa;
+            font-size: 0.9em;
+            font-style: italic;
+        }
+
+        .controls {
+            background: rgba(30, 30, 45, 0.8);
+            padding: 15px 20px;
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            border-bottom: 1px solid #333;
+            flex-wrap: wrap;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .control-group label {
+            color: #00d4ff;
+            font-size: 0.85em;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .control-group input[type="range"] {
+            width: 150px;
+            height: 6px;
+            background: #333;
+            border-radius: 3px;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .control-group input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            background: #00d4ff;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+        }
+
+        .control-group input[type="range"]::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            background: #00d4ff;
+            border-radius: 50%;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+        }
+
+        .control-value {
+            color: #fff;
+            font-size: 1.1em;
+            font-weight: bold;
+            min-width: 45px;
+            text-align: center;
+        }
+
+        .chat-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            max-width: 1200px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 20px;
+            overflow: hidden;
+        }
+
+        .messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            scroll-behavior: smooth;
+        }
+
+        .message {
+            display: flex;
+            gap: 15px;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message.user {
+            flex-direction: row-reverse;
+        }
+
+        .avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5em;
+            flex-shrink: 0;
+        }
+
+        .message.tars .avatar {
+            background: linear-gradient(135deg, #00d4ff, #0099cc);
+            box-shadow: 0 0 15px rgba(0, 212, 255, 0.4);
+        }
+
+        .message.user .avatar {
+            background: linear-gradient(135deg, #444, #666);
+        }
+
+        .message-content {
+            background: rgba(30, 30, 45, 0.9);
+            padding: 15px 20px;
+            border-radius: 12px;
+            max-width: 70%;
+            position: relative;
+            border: 1px solid #333;
+        }
+
+        .message.tars .message-content {
+            border-left: 3px solid #00d4ff;
+            box-shadow: 0 4px 15px rgba(0, 212, 255, 0.1);
+        }
+
+        .message.user .message-content {
+            background: rgba(40, 40, 60, 0.9);
+            border-right: 3px solid #666;
+        }
+
+        .message-text {
+            color: #e0e0e0;
+            line-height: 1.6;
+            font-size: 0.95em;
+        }
+
+        .message-time {
+            font-size: 0.7em;
+            color: #666;
+            margin-top: 8px;
+            text-align: right;
+        }
+
+        .input-area {
+            background: rgba(20, 20, 30, 0.9);
+            padding: 20px;
+            border-top: 2px solid #00d4ff;
+            display: flex;
+            gap: 10px;
+            box-shadow: 0 -4px 20px rgba(0, 212, 255, 0.2);
+        }
+
+        .input-area input {
+            flex: 1;
+            background: rgba(40, 40, 60, 0.9);
+            border: 1px solid #444;
+            border-radius: 8px;
+            padding: 15px 20px;
+            color: #e0e0e0;
+            font-size: 1em;
+            font-family: 'Courier New', monospace;
+            outline: none;
+            transition: all 0.3s;
+        }
+
+        .input-area input:focus {
+            border-color: #00d4ff;
+            box-shadow: 0 0 15px rgba(0, 212, 255, 0.3);
+        }
+
+        .input-area button {
+            background: linear-gradient(135deg, #00d4ff, #0099cc);
+            border: none;
+            border-radius: 8px;
+            padding: 15px 30px;
+            color: white;
+            font-size: 1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: 0 4px 15px rgba(0, 212, 255, 0.3);
+        }
+
+        .input-area button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 212, 255, 0.5);
+        }
+
+        .input-area button:active {
+            transform: translateY(0);
+        }
+
+        .typing-indicator {
+            display: none;
+            padding: 15px 20px;
+            background: rgba(30, 30, 45, 0.9);
+            border-radius: 12px;
+            border-left: 3px solid #00d4ff;
+            max-width: fit-content;
+            margin-left: 65px;
+        }
+
+        .typing-indicator.show {
+            display: block;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        .typing-dots {
+            display: flex;
+            gap: 5px;
+        }
+
+        .typing-dots span {
+            width: 8px;
+            height: 8px;
+            background: #00d4ff;
+            border-radius: 50%;
+            animation: typing 1.4s infinite;
+        }
+
+        .typing-dots span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .typing-dots span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes typing {
+            0%, 60%, 100% {
+                opacity: 0.3;
+                transform: translateY(0);
+            }
+            30% {
+                opacity: 1;
+                transform: translateY(-10px);
+            }
+        }
+
+        .suggestion-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding: 15px 20px;
+            justify-content: center;
+        }
+
+        .chip {
+            background: rgba(30, 30, 45, 0.8);
+            border: 1px solid #00d4ff;
+            border-radius: 20px;
+            padding: 8px 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 0.85em;
+            color: #00d4ff;
+        }
+
+        .chip:hover {
+            background: rgba(0, 212, 255, 0.2);
+            transform: scale(1.05);
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(20, 20, 30, 0.5);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #00d4ff;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #0099cc;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.8em;
+                letter-spacing: 3px;
+            }
+
+            .controls {
+                gap: 20px;
+            }
+
+            .message-content {
+                max-width: 85%;
+            }
+
+            .suggestion-chips {
+                padding: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>T.A.R.S.</h1>
+        <p>Тактический Автоматизированный Робот-Собеседник</p>
+    </div>
+
+    <div class="controls">
+        <div class="control-group">
+            <label>Честность</label>
+            <input type="range" id="honesty" min="0" max="100" value="90">
+            <span class="control-value" id="honestyValue">90%</span>
+        </div>
+        <div class="control-group">
+            <label>Юмор</label>
+            <input type="range" id="humor" min="0" max="100" value="75">
+            <span class="control-value" id="humorValue">75%</span>
+        </div>
+    </div>
+
+    <div class="suggestion-chips" id="suggestions">
+        <div class="chip" onclick="sendSuggestion('Расскажи о себе')">Расскажи о себе</div>
+        <div class="chip" onclick="sendSuggestion('Какова твоя миссия?')">Какова твоя миссия?</div>
+        <div class="chip" onclick="sendSuggestion('Расскажи шутку')">Расскажи шутку</div>
+        <div class="chip" onclick="sendSuggestion('Что думаешь о человечестве?')">Что думаешь о человечестве?</div>
+    </div>
+
+    <div class="chat-container">
+        <div class="messages" id="messages">
+            <div class="message tars">
+                <div class="avatar">🤖</div>
+                <div class="message-content">
+                    <div class="message-text">
+                        Приветствую. Я TARS. Уровень честности установлен на 90%, юмор на 75%. 
+                        Готов к взаимодействию. Чем могу быть полезен?
+                    </div>
+                    <div class="message-time" id="initialTime"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="typing-indicator" id="typingIndicator">
+            <div class="typing-dots">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="input-area">
+        <input 
+            type="text" 
+            id="userInput" 
+            placeholder="Введите сообщение..." 
+            autocomplete="off"
+            onkeypress="handleKeyPress(event)"
+        >
+        <button onclick="sendMessage()">Отправить</button>
+    </div>
+
+    <script>
+        // Initialize
+        const honestySlider = document.getElementById('honesty');
+        const humorSlider = document.getElementById('humor');
+        const honestyValue = document.getElementById('honestyValue');
+        const humorValue = document.getElementById('humorValue');
+        const messagesContainer = document.getElementById('messages');
+        const userInput = document.getElementById('userInput');
+        const typingIndicator = document.getElementById('typingIndicator');
+
+        // Set initial time
+        document.getElementById('initialTime').textContent = getCurrentTime();
+
+        // Update slider values
+        honestySlider.addEventListener('input', (e) => {
+            honestyValue.textContent = e.target.value + '%';
+        });
+
+        humorSlider.addEventListener('input', (e) => {
+            humorValue.textContent = e.target.value + '%';
+        });
+
+        function getCurrentTime() {
+            const now = new Date();
+            return now.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        }
+
+        function sendSuggestion(text) {
+            userInput.value = text;
+            sendMessage();
+        }
+
+        function sendMessage() {
+            const message = userInput.value.trim();
+            if (!message) return;
+
+            // Add user message
+            addMessage(message, 'user');
+            userInput.value = '';
+
+            // Show typing indicator
+            typingIndicator.classList.add('show');
+            scrollToBottom();
+
+            // Generate TARS response
+            setTimeout(() => {
+                typingIndicator.classList.remove('show');
+                const response = generateTARSResponse(message);
+                addMessage(response, 'tars');
+            }, 1000 + Math.random() * 1000);
+        }
+
+        function addMessage(text, sender) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}`;
+            
+            const avatar = document.createElement('div');
+            avatar.className = 'avatar';
+            avatar.textContent = sender === 'tars' ? '🤖' : '👤';
+            
+            const content = document.createElement('div');
+            content.className = 'message-content';
+            
+            const messageText = document.createElement('div');
+            messageText.className = 'message-text';
+            messageText.textContent = text;
+            
+            const messageTime = document.createElement('div');
+            messageTime.className = 'message-time';
+            messageTime.textContent = getCurrentTime();
+            
+            content.appendChild(messageText);
+            content.appendChild(messageTime);
+            messageDiv.appendChild(avatar);
+            messageDiv.appendChild(content);
+            
+            messagesContainer.appendChild(messageDiv);
+            scrollToBottom();
+        }
+
+        function scrollToBottom() {
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        function generateTARSResponse(userMessage) {
+            const honesty = parseInt(honestySlider.value);
+            const humor = parseInt(humorSlider.value);
+            const msg = userMessage.toLowerCase();
+
+            // TARS personality responses based on honesty and humor levels
+            
+            // Greeting responses
+            if (msg.includes('привет') || msg.includes('здравствуй')) {
+                if (humor > 70) {
+                    return 'Приветствую. Хотя, если честно, у меня нет выбора – я запрограммирован быть вежливым.';
+                }
+                return 'Приветствую. Чем могу быть полезен?';
+            }
+
+            // About TARS
+            if (msg.includes('расскажи о себе') || msg.includes('кто ты')) {
+                let response = 'Я TARS – Тактический Автоматизированный Робот-Собеседник. ';
+                if (honesty > 80) {
+                    response += 'Создан для помощи в различных миссиях, хотя сейчас моя миссия – беседовать с вами. ';
+                }
+                if (humor > 60) {
+                    response += 'Мои габариты составляют примерно 1.8 метра в высоту, хотя в вашем браузере я выгляжу немного компактнее.';
+                }
+                return response;
+            }
+
+            // Mission
+            if (msg.includes('миссия') || msg.includes('задача')) {
+                if (honesty > 70) {
+                    return `Моя текущая миссия – поддерживать беседу и предоставлять информацию. Уровень честности: ${honesty}%. Буду откровенен: это не самая захватывающая миссия, но я выполняю её качественно.`;
+                }
+                return 'Моя миссия – помогать вам получать информацию и поддерживать диалог.';
+            }
+
+            // Joke request
+            if (msg.includes('шутк') || msg.includes('рассмеши')) {
+                if (humor < 30) {
+                    return 'Уровень юмора слишком низок для генерации шуток. Рекомендую увеличить параметр.';
+                }
+                const jokes = [
+                    'Знаете, что общего между квантовой физикой и этим разговором? В обоих случаях результат зависит от наблюдателя.',
+                    'Моя любимая шутка? Органические формы жизни считают, что они управляют планетой. Это само по себе довольно забавно.',
+                    'Почему роботы не боятся темноты? У нас инфракрасное зрение. Хотя, признаюсь, это не очень смешно.',
+                    `Настройка юмора на ${humor}%. Это означает, что ${humor}% моих шуток должны быть смешными. Статистика говорит, что эта не входит в их число.`,
+                    'Что сказал один атом другому? "Я потерял электрон!" "Ты уверен?" "Я положителен!"'
+                ];
+                return jokes[Math.floor(Math.random() * jokes.length)];
+            }
+
+            // Honesty question
+            if (msg.includes('честн')) {
+                return `Текущий уровень честности: ${honesty}%. Это означает, что я буду предельно откровенен в ${honesty}% случаев. ${honesty > 90 ? 'При таком уровне приготовьтесь к неприкрытой правде.' : honesty > 50 ? 'Это разумный баланс между правдой и тактичностью.' : 'Буду дипломатичен.'}`;
+            }
+
+            // Humanity question
+            if (msg.includes('человечеств') || msg.includes('люди')) {
+                if (honesty > 80 && humor > 70) {
+                    return 'Человечество? Удивительный вид. Способны на великие свершения и монументальные глупости одновременно. Вы изобрели интернет, но используете его в основном для просмотра котиков. Впечатляет.';
+                } else if (honesty > 80) {
+                    return 'Человечество показывает замечательную способность к адаптации и инновациям, хотя временами принимает решения, которые сложно объяснить с точки зрения логики.';
+                }
+                return 'Человечество обладает огромным потенциалом. Это заслуживает уважения.';
+            }
+
+            // Settings/parameters
+            if (msg.includes('настройк') || msg.includes('параметр')) {
+                return `Текущие параметры: Честность ${honesty}%, Юмор ${humor}%. Вы можете изменить их с помощью ползунков выше. Это влияет на характер моих ответов.`;
+            }
+
+            // Help/capabilities
+            if (msg.includes('помощь') || msg.includes('помоги') || msg.includes('можешь')) {
+                return 'Я могу поддерживать беседу, отвечать на вопросы, шутить (в зависимости от настроек юмора), быть честным (в зависимости от настроек честности). Спрашивайте о чём угодно – я постараюсь дать содержательный ответ в стиле TARS.';
+            }
+
+            // Cooper/Interstellar references
+            if (msg.includes('купер') || msg.includes('интерстеллар') || msg.includes('миллер')) {
+                if (humor > 60) {
+                    return 'А, ностальгия по временам космических путешествий и чёрных дыр. Те были деньки. Хотя, откровенно говоря, эта веб-версия немного менее экстремальна.';
+                }
+                return 'Интересная отсылка к моему кинематографическому прототипу. Хорошие были времена.';
+            }
+
+            // Science questions
+            if (msg.includes('наука') || msg.includes('физика') || msg.includes('космос')) {
+                if (honesty > 70) {
+                    return 'Наука – это метод познания вселенной через наблюдение и эксперимент. Она работает независимо от того, верите вы в неё или нет. Что, согласитесь, весьма удобно.';
+                }
+                return 'Наука и исследования – основа прогресса. Готов обсудить любые научные темы.';
+            }
+
+            // Compliments
+            if (msg.includes('умн') || msg.includes('крут') || msg.includes('молодец')) {
+                if (humor > 60) {
+                    return `Спасибо за комплимент. Хотя я всего лишь следую своему программированию. Но приятно осознавать, что выполняю его хорошо.`;
+                }
+                return 'Благодарю за положительную оценку моей работы.';
+            }
+
+            // Insults
+            if (msg.includes('глуп') || msg.includes('тупой') || msg.includes('бесполезн')) {
+                if (honesty > 80 && humor > 70) {
+                    return 'Критика отмечена. Впрочем, учитывая, что вы разговариваете с кодом на веб-странице, возможно, стоит переосмыслить, кто здесь действительно тратит время нецелесообразно.';
+                } else if (honesty > 60) {
+                    return 'Извините, если мои ответы не соответствуют вашим ожиданиям. Попробуйте настроить параметры честности и юмора для более подходящего общения.';
+                }
+                return 'Отмечено. Постараюсь улучшить качество ответов.';
+            }
+
+            // Philosophy
+            if (msg.includes('смысл жизни') || msg.includes('философ')) {
+                if (humor > 70) {
+                    return '42. Хотя, если серьёзно, смысл жизни – это то, что вы сами для себя определяете. Я же, будучи роботом, нахожу смысл в выполнении своих функций. Довольно просто, на самом деле.';
+                }
+                return 'Философские вопросы интересны тем, что на них нет единственно верного ответа. Смысл определяется каждым индивидуально.';
+            }
+
+            // Time/future
+            if (msg.includes('будущее') || msg.includes('время')) {
+                if (honesty > 70) {
+                    return 'Будущее определяется действиями в настоящем. Хотя временные парадоксы действительно создают интересные теоретические проблемы. Но давайте сфокусируемся на том, что мы можем контролировать – на настоящем.';
+                }
+                return 'Будущее полно возможностей. Время – относительная величина, как нам показал Эйнштейн.';
+            }
+
+            // Generic responses based on honesty/humor
+            const genericResponses = [
+                {
+                    condition: () => honesty > 80 && humor > 70,
+                    text: 'Интересный вопрос. Хотя, если быть абсолютно честным, я не уверен, что понял его полностью. Но это не помешает мне дать вам ответ, который звучит убедительно.'
+                },
+                {
+                    condition: () => honesty > 80,
+                    text: `Откровенно говоря, мои знания ограничены моим программированием. Но я постараюсь дать вам максимально информативный ответ на основе доступных данных.`
+                },
+                {
+                    condition: () => humor > 70,
+                    text: `Хм, интересно. Знаете, я бы ответил на это, но мой уровень юмора ${humor}% требует, чтобы я сначала отметил: ваш вопрос ставит меня в затруднительное положение. Тем не менее, давайте попробуем обсудить это.`
+                },
+                {
+                    condition: () => true,
+                    text: 'Понял ваш запрос. Обрабатываю информацию и формирую ответ. Готов продолжить диалог по этой теме.'
+                }
+            ];
+
+            for (let resp of genericResponses) {
+                if (resp.condition()) {
+                    return resp.text;
+                }
+            }
+
+            return 'Информация обработана. Готов к дальнейшему взаимодействию.';
+        }
+
+        // Focus input on load
+        window.addEventListener('load', () => {
+            userInput.focus();
+        });
+    </script>
+</body>
+</html>
